@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fuel Route Optimizer - US Route Planner</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet Map CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    
+    <style>
+        :root {
+            --bg-base: #0f172a;
+            --bg-surface: rgba(30, 41, 59, 0.7);
+            --bg-card: #1e293b;
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-color: #38bdf8;
+            --accent-hover: #0ea5e9;
+            --success-color: #10b981;
+            --success-bg: rgba(16, 185, 129, 0.1);
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+            --font-main: 'Plus Jakarta Sans', sans-serif;
+            --font-title: 'Outfit', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Sidebar Panel */
+        .sidebar {
+            width: 420px;
+            background-color: var(--bg-base);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            z-index: 10;
+            flex-shrink: 0;
+            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--border-color);
+            background-image: linear-gradient(135deg, rgba(56, 189, 248, 0.1) 0%, transparent 100%);
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            background: linear-gradient(135deg, var(--accent-color), #818cf8);
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-family: var(--font-title);
+            color: #0f172a;
+            font-size: 1.25rem;
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+        }
+
+        .logo-text {
+            font-family: var(--font-title);
+            font-weight: 700;
+            font-size: 1.35rem;
+            letter-spacing: -0.5px;
+            background: linear-gradient(to right, #ffffff, #94a3b8);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo-tagline {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* Form Controls */
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 14px 14px 14px 42px;
+            background-color: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
+            background-color: rgba(15, 23, 42, 0.9);
+        }
+
+        .range-slider-container {
+            background-color: rgba(30, 41, 59, 0.3);
+            border: 1px solid var(--border-color);
+            padding: 16px;
+            border-radius: 10px;
+        }
+
+        .range-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .range-value {
+            font-family: var(--font-title);
+            font-weight: 600;
+            color: var(--accent-color);
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--accent-color);
+            cursor: pointer;
+            height: 6px;
+            border-radius: 3px;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, var(--accent-color), #6366f1);
+            color: #0f172a;
+            border: none;
+            border-radius: 10px;
+            font-family: var(--font-title);
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 15px rgba(56, 189, 248, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(56, 189, 248, 0.35);
+        }
+
+        .btn-submit:active {
+            transform: translateY(0);
+        }
+
+        .btn-submit.loading {
+            pointer-events: none;
+            opacity: 0.8;
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.5), rgba(99, 102, 241, 0.5));
+            cursor: not-allowed;
+        }
+
+        .btn-spinner {
+            display: none;
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(15, 23, 42, 0.25);
+            border-top-color: #0f172a;
+            border-radius: 50%;
+            animation: spin 0.8s infinite linear;
+        }
+
+
+        /* Results Display */
+        .results-section {
+            display: none;
+            flex-direction: column;
+            gap: 20px;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .stat-card {
+            background-color: rgba(30, 41, 59, 0.4);
+            border: 1px solid var(--border-color);
+            padding: 16px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .stat-card.full-width {
+            grid-column: span 2;
+            background: linear-gradient(135deg, var(--success-bg) 0%, rgba(30, 41, 59, 0.4) 100%);
+            border-color: rgba(16, 185, 129, 0.2);
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .stat-value {
+            font-family: var(--font-title);
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .stat-card.full-width .stat-value {
+            color: var(--success-color);
+        }
+
+        /* Itinerary Timeline */
+        .itinerary-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .itinerary-title {
+            font-family: var(--font-title);
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-top: 10px;
+        }
+
+        .timeline {
+            position: relative;
+            padding-left: 28px;
+            border-left: 2px dashed rgba(255, 255, 255, 0.15);
+            margin-left: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .timeline-item {
+            position: relative;
+        }
+
+        .timeline-marker {
+            position: absolute;
+            left: -38px;
+            top: 2px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background-color: var(--bg-base);
+            border: 3px solid var(--accent-color);
+            z-index: 2;
+        }
+
+        .timeline-marker.start {
+            border-color: var(--text-primary);
+        }
+
+        .timeline-marker.finish {
+            border-color: var(--danger-color);
+        }
+
+        .timeline-marker.fuel {
+            border-color: var(--success-color);
+            box-shadow: 0 0 8px var(--success-color);
+        }
+
+        .timeline-content {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .timeline-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .timeline-detail {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .timeline-badge {
+            align-self: flex-start;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            margin-top: 4px;
+            background-color: var(--success-bg);
+            color: var(--success-color);
+            border: 1px solid rgba(16, 185, 129, 0.15);
+        }
+
+        /* Map Container */
+        .map-container {
+            flex: 1;
+            height: 100%;
+            position: relative;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            background-color: #0b0f19;
+        }
+
+        /* Spinner Loader */
+        .loader-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .loader-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(56, 189, 248, 0.1);
+            border-top-color: var(--accent-color);
+            border-radius: 50%;
+            animation: spin 1s infinite linear;
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.1);
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loader-text {
+            font-family: var(--font-title);
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: var(--text-primary);
+        }
+
+        .loader-subtext {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .error-message {
+            background-color: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            display: none;
+            line-height: 1.4;
+        }
+
+        /* Autocomplete dropdown styles */
+        .autocomplete-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background-color: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--border-color);
+            border-top: none;
+            border-radius: 0 0 10px 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .autocomplete-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            transition: all 0.15s ease;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-align: left;
+        }
+
+        .autocomplete-item:hover {
+            background-color: rgba(56, 189, 248, 0.15);
+            color: var(--accent-color);
+        }
+
+        .input-wrapper.open input {
+            border-bottom-left-radius: 0;
+            border-bottom-right-radius: 0;
+            border-color: rgba(56, 189, 248, 0.5);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar Panel -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-container">
+                <div class="logo-icon">⛽</div>
+                <div>
+                    <div class="logo-text">FuelOptimizer</div>
+                    <div class="logo-tagline">USA Route Planner</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="sidebar-content">
+            <!-- Route Input Form -->
+            <form id="routeForm" onsubmit="event.preventDefault(); optimizeRoute();">
+                <div style="display: flex; flex-direction: column; gap: 16px;">
+                    <div class="form-group">
+                        <label for="startInput">Start Location</label>
+                        <div class="input-wrapper">
+                            <span class="input-icon">📍</span>
+                            <input type="text" id="startInput" placeholder="e.g. New York, NY" autocomplete="off" required value="New York, NY">
+                            <div id="startSuggestions" class="autocomplete-dropdown"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="finishInput">Finish Location</label>
+                        <div class="input-wrapper">
+                            <span class="input-icon">🏁</span>
+                            <input type="text" id="finishInput" placeholder="e.g. Miami, FL" autocomplete="off" required value="Miami, FL">
+                            <div id="finishSuggestions" class="autocomplete-dropdown"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group range-slider-container">
+                        <div class="range-header">
+                            <label for="penaltyInput">Refueling Preference</label>
+                            <span class="range-value" id="penaltyDisplay">$5.00</span>
+                        </div>
+                        <input type="range" id="penaltyInput" min="0" max="25" step="1" value="5" oninput="updatePenaltyDisplay(this.value)">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--text-secondary); margin-top: 6px;">
+                            <span>Fewer stops</span>
+                            <span>Min cost</span>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" id="submitBtn" class="btn-submit">
+                        <span class="btn-spinner" id="btnSpinner"></span>
+                        <span class="btn-text" id="btnText">Calculate Optimal Route</span>
+                        <span class="btn-icon" id="btnIcon">⚡</span>
+                    </button>
+                </div>
+            </form>
+            
+            <!-- Error Alert -->
+            <div id="errorAlert" class="error-message"></div>
+            
+            <!-- Results Container -->
+            <div id="results" class="results-section">
+                <div class="stats-grid">
+                    <div class="stat-card full-width">
+                        <span class="stat-label">Total Fuel Cost</span>
+                        <span class="stat-value" id="fuelCostVal">$0.00</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Total Distance</span>
+                        <span class="stat-value" id="distanceVal">0 mi</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Fuel Stops</span>
+                        <span class="stat-value" id="stopsCountVal">0</span>
+                    </div>
+                </div>
+                
+                <div class="itinerary-section">
+                    <div class="itinerary-title">Route Itinerary</div>
+                    <div class="timeline" id="itineraryTimeline">
+                        <!-- Dynamic itinerary timeline items -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Map Canvas -->
+    <div class="map-container">
+        <div id="map"></div>
+        
+        <!-- Loading Overlay -->
+        <div id="loader" class="loader-overlay">
+            <div class="spinner"></div>
+            <div class="loader-text" id="loaderText">Geocoding locations...</div>
+            <div class="loader-subtext">Fetching optimal fuel routes via OSRM</div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <script>
+        let map;
+        let routeLayer;
+        let markerLayers = [];
+        
+        // Initialize Map
+        window.addEventListener('DOMContentLoaded', () => {
+            map = L.map('map', {
+                zoomControl: false
+            }).setView([37.8, -96], 4); // Centered on USA
+            
+            // Zoom control position
+            L.control.zoom({ position: 'topright' }).addTo(map);
+            
+            // Add CartoDB Dark Matter tile layer (gorgeous dark mode)
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+                subdomains: 'abcd',
+                maxZoom: 20
+            }).addTo(map);
+        });
+
+        function updatePenaltyDisplay(val) {
+            // Display value (invert visually so higher penalty means fewer stops/higher convenience overhead)
+            // Mathematically: penalty range is 0 to 25. 
+            // In our system: a higher stop_penalty leads to fewer stops.
+            document.getElementById('penaltyDisplay').innerText = '$' + parseFloat(val).toFixed(2);
+        }
+
+        function showLoader(text) {
+            document.getElementById('loaderText').innerText = text;
+            document.getElementById('loader').classList.add('active');
+        }
+
+        function hideLoader() {
+            document.getElementById('loader').classList.remove('active');
+        }
+
+        function showError(msg) {
+            const errorAlert = document.getElementById('errorAlert');
+            errorAlert.innerText = msg;
+            errorAlert.style.display = 'block';
+            document.getElementById('results').style.display = 'none';
+        }
+
+        function clearError() {
+            document.getElementById('errorAlert').style.display = 'none';
+        }
+
+        // Main Route Optimization Call
+        async function optimizeRoute() {
+            clearError();
+            const start = document.getElementById('startInput').value.trim();
+            const finish = document.getElementById('finishInput').value.trim();
+            const penalty = document.getElementById('penaltyInput').value;
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const btnText = document.getElementById('btnText');
+            const btnSpinner = document.getElementById('btnSpinner');
+            const btnIcon = document.getElementById('btnIcon');
+            
+            // Set loading state
+            submitBtn.classList.add('loading');
+            submitBtn.disabled = true;
+            btnText.innerText = "Calculating...";
+            btnSpinner.style.display = "inline-block";
+            btnIcon.style.display = "none";
+            
+            showLoader("Optimizing fuel route...");
+            
+            // Clear previous map layers
+            if (routeLayer) {
+                map.removeLayer(routeLayer);
+            }
+            markerLayers.forEach(layer => map.removeLayer(layer));
+            markerLayers = [];
+            
+            try {
+                const url = `/api/route/?start=${encodeURIComponent(start)}&finish=${encodeURIComponent(finish)}&penalty=${penalty}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || "An error occurred while calculating the route.");
+                }
+                
+                renderRoute(data);
+            } catch (err) {
+                showError(err.message);
+            } finally {
+                hideLoader();
+                // Reset loading state
+                submitBtn.classList.remove('loading');
+                submitBtn.disabled = false;
+                btnText.innerText = "Calculate Optimal Route";
+                btnSpinner.style.display = "none";
+                btnIcon.style.display = "inline-block";
+            }
+        }
+
+        // Render Route and Stops on Map & Sidebar
+        function renderRoute(data) {
+            // 1. Plot the route polyline
+            routeLayer = L.geoJSON({
+                type: "Feature",
+                geometry: {
+                    type: "LineString",
+                    coordinates: data.route_geometry.map(coord => [coord[1], coord[0]]) // Leaflet expects [lng, lat] for GeoJSON
+                }
+            }, {
+                style: {
+                    color: '#38bdf8',
+                    weight: 5,
+                    opacity: 0.8,
+                    lineCap: 'round',
+                    lineJoin: 'round',
+                    shadowBlur: 10,
+                    shadowColor: '#0ea5e9'
+                }
+            }).addTo(map);
+            
+            // 2. Add Start & Finish Markers
+            const startMarker = L.circleMarker([data.start_location.latitude, data.start_location.longitude], {
+                radius: 8,
+                fillColor: '#ffffff',
+                color: '#0f172a',
+                weight: 3,
+                fillOpacity: 1
+            }).addTo(map).bindPopup(`<b>Start:</b> ${data.start_location.name}`);
+            markerLayers.push(startMarker);
+            
+            const finishMarker = L.circleMarker([data.finish_location.latitude, data.finish_location.longitude], {
+                radius: 8,
+                fillColor: '#ef4444',
+                color: '#0f172a',
+                weight: 3,
+                fillOpacity: 1
+            }).addTo(map).bindPopup(`<b>Finish:</b> ${data.finish_location.name}`);
+            markerLayers.push(finishMarker);
+            
+            // 3. Add Fuel Stops Markers
+            data.fuel_stops.forEach((stop, index) => {
+                const fuelMarker = L.circleMarker([stop.latitude, stop.longitude], {
+                    radius: 8,
+                    fillColor: '#10b981',
+                    color: '#0f172a',
+                    weight: 2,
+                    fillOpacity: 1
+                }).addTo(map).bindPopup(`
+                    <div style="font-family: var(--font-main); color: #0f172a; padding: 4px;">
+                        <h4 style="margin: 0 0 4px 0; font-family: var(--font-title); font-size: 0.95rem;">${stop.name}</h4>
+                        <p style="margin: 0 0 2px 0; font-size: 0.8rem; color: #475569;">${stop.address}, ${stop.city}, ${stop.state}</p>
+                        <p style="margin: 4px 0 0 0; font-size: 0.85rem; font-weight: bold; color: #059669;">Price: $${stop.price.toFixed(3)} / gal</p>
+                        <p style="margin: 2px 0 0 0; font-size: 0.75rem; color: #64748b;">Distance along route: ${stop.distance_from_start.toFixed(1)} mi</p>
+                    </div>
+                `);
+                markerLayers.push(fuelMarker);
+            });
+            
+            // Fit map bounds to route
+            const bounds = routeLayer.getBounds();
+            map.fitBounds(bounds, { padding: [50, 50] });
+            
+            // 4. Update Stats in Sidebar
+            document.getElementById('fuelCostVal').innerText = '$' + data.total_fuel_cost.toFixed(2);
+            document.getElementById('distanceVal').innerText = data.total_distance_miles.toFixed(0) + ' mi';
+            document.getElementById('stopsCountVal').innerText = data.fuel_stops.length;
+            
+            // 5. Build Itinerary Timeline
+            const timeline = document.getElementById('itineraryTimeline');
+            timeline.innerHTML = '';
+            
+            // Add Start to timeline
+            timeline.appendChild(createTimelineItem(
+                data.start_location.name,
+                "Start Location",
+                "start"
+            ));
+            
+            // Add Fuel Stops to timeline
+            data.fuel_stops.forEach((stop, index) => {
+                const detail = `${stop.address}, ${stop.city}, ${stop.state} (at ${stop.distance_from_start.toFixed(0)} mi)`;
+                const label = `Stop #${index + 1} • Refuel at $${stop.price.toFixed(3)}/gal`;
+                timeline.appendChild(createTimelineItem(
+                    stop.name,
+                    detail,
+                    "fuel",
+                    label
+                ));
+            });
+            
+            // Add Finish to timeline
+            timeline.appendChild(createTimelineItem(
+                data.finish_location.name,
+                `Destination reached (total distance: ${data.total_distance_miles.toFixed(0)} mi)`,
+                "finish"
+            ));
+            
+            // Show results panel
+            document.getElementById('results').style.display = 'flex';
+        }
+
+        function createTimelineItem(name, detail, type, label = null) {
+            const item = document.createElement('div');
+            item.className = 'timeline-item';
+            
+            const marker = document.createElement('div');
+            marker.className = `timeline-marker ${type}`;
+            item.appendChild(marker);
+            
+            const content = document.createElement('div');
+            content.className = 'timeline-content';
+            
+            const nameEl = document.createElement('div');
+            nameEl.className = 'timeline-name';
+            nameEl.innerText = name;
+            content.appendChild(nameEl);
+            
+            const detailEl = document.createElement('div');
+            detailEl.className = 'timeline-detail';
+            detailEl.innerText = detail;
+            content.appendChild(detailEl);
+            
+            if (label) {
+                const badge = document.createElement('div');
+                badge.className = 'timeline-badge';
+                badge.innerText = label;
+                content.appendChild(badge);
+            }
+            
+            item.appendChild(content);
+            return item;
+        }
+
+        // Autocomplete suggestions setup
+        function setupAutocomplete(inputId, dropdownId) {
+            const input = document.getElementById(inputId);
+            const dropdown = document.getElementById(dropdownId);
+            const wrapper = input.parentElement;
+            let debounceTimer;
+
+            input.addEventListener('input', () => {
+                clearTimeout(debounceTimer);
+                const query = input.value.trim();
+                
+                if (query.length < 3) {
+                    closeDropdown();
+                    return;
+                }
+
+                debounceTimer = setTimeout(async () => {
+                    try {
+                        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&countrycodes=us`;
+                        const res = await fetch(url, {
+                            headers: {
+                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36'
+                            }
+                        });
+                        const data = await res.json();
+                        
+                        dropdown.innerHTML = '';
+                        if (data && data.length > 0) {
+                            data.forEach(item => {
+                                const div = document.createElement('div');
+                                div.className = 'autocomplete-item';
+                                div.innerText = item.display_name;
+                                div.addEventListener('click', () => {
+                                    input.value = item.display_name;
+                                    closeDropdown();
+                                });
+                                dropdown.appendChild(div);
+                            });
+                            openDropdown();
+                        } else {
+                            closeDropdown();
+                        }
+                    } catch (e) {
+                        console.error('Autocomplete error:', e);
+                    }
+                }, 300);
+            });
+
+            function openDropdown() {
+                dropdown.style.display = 'block';
+                wrapper.classList.add('open');
+            }
+
+            function closeDropdown() {
+                dropdown.style.display = 'none';
+                wrapper.classList.remove('open');
+            }
+
+            document.addEventListener('click', (e) => {
+                if (!wrapper.contains(e.target)) {
+                    closeDropdown();
+                }
+            });
+        }
+
+        // Initialize autocompletes
+        setupAutocomplete('startInput', 'startSuggestions');
+        setupAutocomplete('finishInput', 'finishSuggestions');
+    </script>
+</body>
+</html>
